@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gcq.picture.common.ErrorCode;
 import com.gcq.picture.constant.CommonConstant;
 import com.gcq.picture.exception.BusinessException;
+import com.gcq.picture.manager.auth.StpKit;
 import com.gcq.picture.mapper.UserMapper;
 import com.gcq.picture.model.dto.user.UserQueryRequest;
 import com.gcq.picture.model.entity.Space;
@@ -111,6 +112,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         // 3. 记录用户的登录态
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
+
+        //4. 设置sa-token权限态
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 
@@ -215,11 +220,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean userLogout(HttpServletRequest request) {
+        Object attribute = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (request.getSession().getAttribute(USER_LOGIN_STATE) == null) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
         }
         // 移除登录态
         request.getSession().removeAttribute(USER_LOGIN_STATE);
+        //移除权限态
+        StpKit.SPACE.logout(((User)attribute).getId());
         return true;
     }
 
